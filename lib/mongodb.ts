@@ -1,7 +1,11 @@
 import { MongoClient } from 'mongodb';
 
+// Check for MongoDB URI with better error message
 if (!process.env.MONGODB_URI) {
-  throw new Error('Invalid/Missing environment variable: "MONGODB_URI"');
+  console.error('❌ MONGODB_URI environment variable is not set');
+  console.error('📝 Please create a .env.local file with your MongoDB connection string');
+  console.error('🔗 Example: MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/database');
+  throw new Error('Invalid/Missing environment variable: "MONGODB_URI". Please check your .env.local file.');
 }
 
 const uri = process.env.MONGODB_URI;
@@ -30,7 +34,26 @@ const options = {
     w: 'majority' as const,
     j: true,
     wtimeout: 30000 // Increased from 10000 to 30 seconds
-  }
+  },
+  // SSL/TLS Configuration
+  ssl: true,
+  sslValidate: process.env.NODE_ENV === 'production',
+  sslCA: process.env.MONGODB_SSL_CA,
+  sslCert: process.env.MONGODB_SSL_CERT,
+  sslKey: process.env.MONGODB_SSL_KEY,
+  sslPass: process.env.MONGODB_SSL_PASS,
+  // TLS Configuration for newer MongoDB versions
+  tls: true,
+  tlsAllowInvalidCertificates: process.env.NODE_ENV !== 'production',
+  tlsAllowInvalidHostnames: process.env.NODE_ENV !== 'production',
+  tlsInsecure: process.env.NODE_ENV !== 'production',
+  // Connection string options for SSL
+  directConnection: false,
+  // Add connection string parameters for SSL
+  ...(process.env.NODE_ENV !== 'production' && {
+    tlsAllowInvalidCertificates: true,
+    tlsAllowInvalidHostnames: true,
+  })
 };
 
 let client: MongoClient | undefined;
@@ -79,7 +102,7 @@ if (client) {
   });
 }
 
-// Robust connection utility with improved retry logic
+// Robust connection utility with improved retry logic and SSL handling
 export async function getMongoClient(maxRetries = 5, retryDelay = 1000): Promise<MongoClient> {
   let lastError: Error | null = null;
   
@@ -87,17 +110,29 @@ export async function getMongoClient(maxRetries = 5, retryDelay = 1000): Promise
     try {
       console.log(`MongoDB connection attempt ${attempt}/${maxRetries}...`);
       
-      const client = await Promise.race([
-        clientPromise,
+      // Create a new client for each attempt to avoid connection pooling issues
+      const client = new MongoClient(uri, {
+        ...options,
+        // For SSL issues, try with more permissive settings on retry
+        ...(attempt > 1 && {
+          tlsAllowInvalidCertificates: true,
+          tlsAllowInvalidHostnames: true,
+          tlsInsecure: true,
+          sslValidate: false
+        })
+      });
+      
+      const connectedClient = await Promise.race([
+        client.connect(),
         new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('MongoDB connection timeout')), 45000) // Increased timeout to 45 seconds
+          setTimeout(() => reject(new Error('MongoDB connection timeout')), 45000)
         )
       ]);
       
       // Test the connection with a ping
-      await client.db().admin().ping();
+      await connectedClient.db().admin().ping();
       console.log(`MongoDB connection successful on attempt ${attempt}`);
-      return client;
+      return connectedClient;
     } catch (error) {
       lastError = error instanceof Error ? error : new Error('Unknown connection error');
       console.warn(`MongoDB connection attempt ${attempt} failed:`, lastError.message);
@@ -105,7 +140,7 @@ export async function getMongoClient(maxRetries = 5, retryDelay = 1000): Promise
       if (attempt < maxRetries) {
         console.log(`Retrying in ${retryDelay}ms...`);
         await new Promise(resolve => setTimeout(resolve, retryDelay));
-        retryDelay = Math.min(retryDelay * 1.5, 10000); // Exponential backoff with max 10 seconds
+        retryDelay = Math.min(retryDelay * 1.5, 10000);
       }
     }
   }

@@ -1,8 +1,37 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Mazars Cybersecurity Assessment Tool
+
+This is a [Next.js](https://nextjs.org) project for conducting cybersecurity assessments with MongoDB storage and email notifications.
+
+## Environment Setup
+
+Before running the application, you need to set up your environment variables. Create a `.env.local` file in the root directory with the following variables:
+
+```bash
+# Required: MongoDB Connection String
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/database?retryWrites=true&w=majority
+
+# Optional: Email Configuration (for notifications)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+FROM_EMAIL=your-email@gmail.com
+TO_EMAIL=admin@company.com
+
+# Environment
+NODE_ENV=development
+```
 
 ## Getting Started
 
-First, run the development server:
+First, install dependencies:
+
+```bash
+npm install
+```
+
+Then, run the development server:
 
 ```bash
 npm run dev
@@ -16,9 +45,22 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Troubleshooting
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+If you encounter MongoDB connection issues:
+
+1. **Check your `.env.local` file** - Ensure `MONGODB_URI` is properly set
+2. **Test the connection** - Run `node scripts/test-mongodb-connection.js` to verify your MongoDB connection
+3. **Check SSL settings** - The application automatically handles SSL/TLS configuration for different environments
+
+## Features
+
+- Cybersecurity assessment form with multiple categories and areas
+- MongoDB storage for assessment data
+- Email notifications (optional)
+- Admin dashboard for viewing and managing assessments
+- PDF report generation
+- Multi-language support (English/French)
 
 ## Learn More
 

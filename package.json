@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "test:mongodb": "node scripts/test-mongodb.js",
-    "test:mongodb-connection": "node scripts/test-mongodb-connection.js"
+    "test:mongodb-connection": "node scripts/test-mongodb-connection.js",
+    "check-env": "node scripts/check-env.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",

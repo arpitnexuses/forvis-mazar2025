@@ -418,6 +418,7 @@ export function CybersecurityAssessmentForm() {
       
       // Store assessment data in MongoDB with improved retry logic
       let storeResponse;
+      let storeResult;
       let retryCount = 0;
       const maxRetries = 5; // Increased from 3 to 5
       
@@ -433,20 +434,24 @@ export function CybersecurityAssessmentForm() {
             body: JSON.stringify(assessmentData),
           });
 
+          // Read the response body only once
+          const responseData = await storeResponse.json();
+
           if (storeResponse.ok) {
             console.log("Assessment stored successfully on attempt", retryCount + 1);
+            storeResult = responseData;
             break; // Success, exit retry loop
           }
 
-          const errorData = await storeResponse.json();
-          console.error(`Store assessment error (attempt ${retryCount + 1}):`, errorData);
+          console.error(`Store assessment error (attempt ${retryCount + 1}):`, responseData);
           
           // If it's a duplicate submission or already exists, don't retry
-          if (errorData.message && (
-            errorData.message.includes('already submitted') || 
-            errorData.message.includes('already exists')
+          if (responseData.message && (
+            responseData.message.includes('already submitted') || 
+            responseData.message.includes('already exists')
           )) {
             console.log("Duplicate submission detected, not retrying");
+            storeResult = responseData;
             break;
           }
           
@@ -468,13 +473,11 @@ export function CybersecurityAssessmentForm() {
       }
 
       if (!storeResponse || !storeResponse.ok) {
-        const errorData = await storeResponse?.json();
         throw new Error(
-          errorData?.message || "Failed to store assessment data after multiple attempts"
+          storeResult?.message || "Failed to store assessment data after multiple attempts"
         );
       }
 
-      const storeResult = await storeResponse.json();
       console.log("Assessment data stored successfully:", storeResult);
 
       // Send internal notification (non-blocking) with timeout
