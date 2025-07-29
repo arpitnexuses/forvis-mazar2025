@@ -10,50 +10,32 @@ if (!process.env.MONGODB_URI) {
 
 const uri = process.env.MONGODB_URI;
 const options = {
-  maxPoolSize: 10, // Reduced from 50 to prevent connection exhaustion
-  minPoolSize: 1, // Reduced from 5 to be more conservative
-  maxIdleTimeMS: 60000, // Increased from 30000 to 60 seconds
-  serverSelectionTimeoutMS: 30000, // Increased from 15000 to 30 seconds
-  socketTimeoutMS: 60000, // Increased from 45000 to 60 seconds
-  connectTimeoutMS: 30000, // Increased from 15000 to 30 seconds
+  maxPoolSize: 5, // Reduced for production
+  minPoolSize: 0, // Start with 0 for serverless
+  maxIdleTimeMS: 30000, // 30 seconds
+  serverSelectionTimeoutMS: 15000, // 15 seconds
+  socketTimeoutMS: 30000, // 30 seconds
+  connectTimeoutMS: 15000, // 15 seconds
   retryWrites: true,
   retryReads: true,
   w: 'majority' as const,
-  // Reduced heartbeat frequency to reduce overhead
-  heartbeatFrequencyMS: 30000,
-  // Add server monitoring
+  heartbeatFrequencyMS: 10000, // 10 seconds
   serverApi: {
     version: '1' as const,
     strict: true,
     deprecationErrors: true,
   },
-  // Add connection monitoring only in development
   monitorCommands: process.env.NODE_ENV === 'development',
-  // Improved write concern for better reliability
   writeConcern: {
     w: 'majority' as const,
     j: true,
-    wtimeout: 30000 // Increased from 10000 to 30 seconds
+    wtimeout: 10000
   },
-  // SSL/TLS Configuration
+  // Simplified SSL configuration for production
   ssl: true,
-  sslValidate: process.env.NODE_ENV === 'production',
-  sslCA: process.env.MONGODB_SSL_CA,
-  sslCert: process.env.MONGODB_SSL_CERT,
-  sslKey: process.env.MONGODB_SSL_KEY,
-  sslPass: process.env.MONGODB_SSL_PASS,
-  // TLS Configuration for newer MongoDB versions
-  tls: true,
-  tlsAllowInvalidCertificates: process.env.NODE_ENV !== 'production',
-  tlsAllowInvalidHostnames: process.env.NODE_ENV !== 'production',
-  tlsInsecure: process.env.NODE_ENV !== 'production',
-  // Connection string options for SSL
+  sslValidate: true,
+  // Remove complex SSL options that might cause issues
   directConnection: false,
-  // Add connection string parameters for SSL
-  ...(process.env.NODE_ENV !== 'production' && {
-    tlsAllowInvalidCertificates: true,
-    tlsAllowInvalidHostnames: true,
-  })
 };
 
 let client: MongoClient | undefined;
@@ -70,7 +52,7 @@ if (process.env.NODE_ENV === 'development') {
   }
   clientPromise = globalWithMongo._mongoClientPromise;
 } else {
-  // In production, create a new client for each request to avoid connection pooling issues
+  // In production, create a new client for each request
   client = new MongoClient(uri, options);
   clientPromise = client.connect();
 }
@@ -102,30 +84,21 @@ if (client) {
   });
 }
 
-// Robust connection utility with improved retry logic and SSL handling
-export async function getMongoClient(maxRetries = 5, retryDelay = 1000): Promise<MongoClient> {
+// Robust connection utility with improved retry logic
+export async function getMongoClient(maxRetries = 3, retryDelay = 1000): Promise<MongoClient> {
   let lastError: Error | null = null;
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       console.log(`MongoDB connection attempt ${attempt}/${maxRetries}...`);
       
-      // Create a new client for each attempt to avoid connection pooling issues
-      const client = new MongoClient(uri, {
-        ...options,
-        // For SSL issues, try with more permissive settings on retry
-        ...(attempt > 1 && {
-          tlsAllowInvalidCertificates: true,
-          tlsAllowInvalidHostnames: true,
-          tlsInsecure: true,
-          sslValidate: false
-        })
-      });
+      // Create a new client for each attempt
+      const client = new MongoClient(uri, options);
       
       const connectedClient = await Promise.race([
         client.connect(),
         new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('MongoDB connection timeout')), 45000)
+          setTimeout(() => reject(new Error('MongoDB connection timeout')), 15000)
         )
       ]);
       
@@ -140,7 +113,7 @@ export async function getMongoClient(maxRetries = 5, retryDelay = 1000): Promise
       if (attempt < maxRetries) {
         console.log(`Retrying in ${retryDelay}ms...`);
         await new Promise(resolve => setTimeout(resolve, retryDelay));
-        retryDelay = Math.min(retryDelay * 1.5, 10000);
+        retryDelay = Math.min(retryDelay * 2, 5000);
       }
     }
   }

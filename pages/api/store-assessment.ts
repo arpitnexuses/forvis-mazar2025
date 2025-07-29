@@ -43,6 +43,16 @@ interface AssessmentData {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // Set CORS headers for production
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
@@ -77,7 +87,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Validate required fields
     if (!personalInfo?.email || !personalInfo?.environmentUniqueName) {
-      throw new Error('Missing required fields: email or environmentUniqueName');
+      return res.status(400).json({ 
+        message: 'Missing required fields',
+        error: 'email or environmentUniqueName is missing'
+      });
     }
 
     console.log('Attempting to connect to MongoDB...');

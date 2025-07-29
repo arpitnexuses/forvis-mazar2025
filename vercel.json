@@ -2,7 +2,32 @@
   "functions": {
     "pages/api/generate-pdf.ts": {
       "maxDuration": 30
+    },
+    "pages/api/store-assessment.ts": {
+      "maxDuration": 30
+    },
+    "pages/api/auth/[...nextauth].ts": {
+      "maxDuration": 10
     }
   },
-  "regions": ["iad1"]
+  "regions": ["iad1"],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, PUT, DELETE, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization"
+        }
+      ]
+    }
+  ]
 } 
