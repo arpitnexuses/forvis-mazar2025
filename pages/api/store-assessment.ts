@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getMongoClient } from '@/lib/mongodb';
+import { MongoClient } from 'mongodb';
 
 // Define the enhanced structure of the request body
 interface AssessmentData {
@@ -46,7 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
-  let client: any = null;
+  let client: MongoClient | null = null;
   
   try {
     // Log environment check

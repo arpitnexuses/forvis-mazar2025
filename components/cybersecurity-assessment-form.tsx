@@ -478,7 +478,7 @@ export function CybersecurityAssessmentForm() {
       console.log("Assessment data stored successfully:", storeResult);
 
       // Send internal notification (non-blocking) with timeout
-      const internalEmailPromise = fetch("/api/send-assessment", {
+      fetch("/api/send-assessment", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -497,7 +497,7 @@ export function CybersecurityAssessmentForm() {
       });
 
       // Send user email notification (non-blocking) with timeout
-      const userEmailPromise = fetch("/api/send-user-email", {
+      fetch("/api/send-user-email", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

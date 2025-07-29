@@ -1,23 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getMongoClient, COLLECTIONS } from '@/lib/mongodb';
-import { Filter } from 'mongodb';
-
-interface Assessment {
-  personalInfo: {
-    email: string;
-    environmentUniqueName: string;
-  };
-  createdAt: Date;
-  updatedAt?: Date;
-  score: number;
-}
+import { Filter, MongoClient, Document } from 'mongodb';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
-  let client: any = null;
+  let client: MongoClient | null = null;
 
   try {
     const { limit = 10, skip = 0, email = '', environmentName = '', dateFrom = '', dateTo = '' } = req.query;
@@ -28,7 +18,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const collection = db.collection(COLLECTIONS.ASSESSMENTS);
 
     // Build query filters
-    const query: Filter<Assessment> = {};
+    const query: Filter<Document> = {};
     if (email) {
       query['personalInfo.email'] = { $regex: email as string, $options: 'i' };
     }
@@ -61,7 +51,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log(`Retrieved ${assessments.length} assessments out of ${total} total`);
 
     // Convert Date objects to strings for frontend compatibility
-    const processedAssessments = assessments.map((assessment: any) => ({
+    const processedAssessments = assessments.map((assessment: Document) => ({
       ...assessment,
       createdAt: assessment.createdAt ? new Date(assessment.createdAt).toISOString() : new Date().toISOString(),
       updatedAt: assessment.updatedAt ? new Date(assessment.updatedAt).toISOString() : new Date().toISOString()
@@ -69,7 +59,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Calculate statistics
     const allScores = await collection.find({}).project({ score: 1 }).toArray();
-    const scores = allScores.map((a: any) => a.score);
+    const scores = allScores.map((a: Document) => a.score as number);
     const statistics = {
       totalAssessments: total,
       averageScore: scores.length > 0 ? scores.reduce((a: number, b: number) => a + b, 0) / scores.length : 0,

@@ -1,13 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getMongoClient, COLLECTIONS } from '@/lib/mongodb';
-import { ObjectId } from 'mongodb';
+import { ObjectId, MongoClient } from 'mongodb';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'DELETE') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
-  let client: any = null;
+  let client: MongoClient | null = null;
 
   try {
     const { id } = req.query;
