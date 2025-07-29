@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getMongoClient } from '@/lib/mongodb';
-import { MongoClient } from 'mongodb';
+import { MongoClient, InsertOneResult } from 'mongodb';
 
 // Define the enhanced structure of the request body
 interface AssessmentData {
@@ -130,7 +130,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       'completedQuestions': completedQuestions
     });
     
-    let result: any = null;
+    let result: InsertOneResult | null = null;
     
     if (existingSubmission) {
       console.log('Duplicate submission detected with identical data, skipping...');
