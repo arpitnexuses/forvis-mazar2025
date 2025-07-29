@@ -20,6 +20,8 @@ export default NextAuth({
       },
       async authorize(credentials) {
         try {
+          console.log('[NextAuth] Attempting to authorize user');
+          
           if (!credentials?.email || !credentials?.password) {
             throw new Error('Please enter email and password');
           }
@@ -43,6 +45,7 @@ export default NextAuth({
             throw new Error('Invalid password');
           }
 
+          console.log('[NextAuth] User authorized successfully');
           return {
             id: user._id.toString(),
             email: user.email,

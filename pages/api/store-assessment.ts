@@ -43,6 +43,8 @@ interface AssessmentData {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  console.log(`[store-assessment] ${req.method} request received`);
+  
   // Set CORS headers for production
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -50,16 +52,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // Handle preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('[store-assessment] Handling OPTIONS request');
     return res.status(200).end();
   }
 
+  // Only allow POST method
   if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method Not Allowed' });
+    console.log(`[store-assessment] Method ${req.method} not allowed`);
+    return res.status(405).json({ 
+      message: 'Method Not Allowed',
+      allowedMethods: ['POST'],
+      receivedMethod: req.method
+    });
   }
 
   let client: MongoClient | null = null;
   
   try {
+    console.log('[store-assessment] Starting request processing');
+    
     // Log environment check
     console.log('Checking environment variables...');
     if (!process.env.MONGODB_URI) {
@@ -71,6 +82,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         details: 'Create a .env.local file with your MongoDB connection string'
       });
     }
+
+    console.log('[store-assessment] Request body:', JSON.stringify(req.body, null, 2));
 
     const { 
       personalInfo, 
@@ -87,9 +100,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Validate required fields
     if (!personalInfo?.email || !personalInfo?.environmentUniqueName) {
+      console.log('[store-assessment] Missing required fields');
       return res.status(400).json({ 
         message: 'Missing required fields',
-        error: 'email or environmentUniqueName is missing'
+        error: 'email or environmentUniqueName is missing',
+        receivedData: {
+          hasPersonalInfo: !!personalInfo,
+          hasEmail: !!personalInfo?.email,
+          hasEnvironmentUniqueName: !!personalInfo?.environmentUniqueName
+        }
       });
     }
 
@@ -197,6 +216,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const assessmentId = result?.insertedId;
 
+    console.log('[store-assessment] Successfully processed request');
     if (!res.writableEnded) {
       res.status(200).json({ 
         message: 'Assessment stored successfully',
