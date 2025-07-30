@@ -33,7 +33,6 @@ const options = {
   },
   // Simplified SSL configuration for production
   ssl: true,
-  sslValidate: true,
   // Remove complex SSL options that might cause issues
   directConnection: false,
 };
